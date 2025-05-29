@@ -1,32 +1,44 @@
+from flask import Flask, render_template, request
 from testrail_client import TestRailClient
+import re
 
-def main():
-    client = TestRailClient()
+app = Flask(__name__)
+client = TestRailClient()
 
-    # Example: Get projects
-    print("Fetching projects...")
-    projects = client.get_projects()
-    for project in projects:
-        print(f"Project ID: {project['id']}, Name: {project['name']}")
+@app.route("/", methods=["GET", "POST"])
+def index():
+    total = executed = not_executed = None
+    error = None
 
-    # Example: Create a test run in a project (replace IDs accordingly)
-    project_id = 1   # replace with your project ID
-    suite_id = 1     # replace with your suite ID
-    test_run_name = "Automated Test Run"
-    description = "Created via API"
+    if request.method == "POST":
+        url_input = request.form.get("testrail_url", "").strip()
+        print("Received URL input:", url_input)
 
-    print(f"\nCreating test run '{test_run_name}' in project ID {project_id}...")
-    test_run = client.add_test_run(project_id, suite_id, test_run_name, description)
-    print(f"Test Run created with ID: {test_run['id']}")
+        if url_input:
+            match = re.search(r"/runs/view/(\d+)", url_input)
+            if match:
+                run_id = match.group(1)
+                print("Extracted Run ID:", run_id)
 
-    # Example: Add test result (replace test_id and status_id accordingly)
-    test_id = 1      # replace with your test ID
-    status_id = 1    # 1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed
-    comment = "Test passed successfully."
+                try:
+                    tests = client.get_tests(run_id)
+                    print(f"Total tests fetched: {len(tests)}")
 
-    print(f"\nAdding test result for test ID {test_id}...")
-    result = client.add_test_result(test_id, status_id, comment)
-    print("Test result added:", result)
+                    # DEBUG: Print status of first 5 tests
+                    for test in tests[:5]:
+                        print(f"Test ID: {test.get('id')}, Status ID: {test.get('status_id')}")
+
+                    total = len(tests)
+                    executed = sum(1 for test in tests if test.get("status_id", 3) != 3)
+                    not_executed = total - executed
+                except Exception as e:
+                    error = f"Error fetching data: {str(e)}"
+            else:
+                error = "Invalid TestRail URL. Please include `/runs/view/<id>`."
+        else:
+            error = "No URL input received."
+
+    return render_template("index.html", total=total, executed=executed, not_executed=not_executed, error=error)
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)
