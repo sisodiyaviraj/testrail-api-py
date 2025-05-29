@@ -9,6 +9,7 @@ client = TestRailClient()
 def index():
     total = executed = not_executed = None
     error = None
+    priority_counts = {}
 
     if request.method == "POST":
         url_input = request.form.get("testrail_url", "").strip()
@@ -24,13 +25,24 @@ def index():
                     tests = client.get_tests(run_id)
                     print(f"Total tests fetched: {len(tests)}")
 
-                    # DEBUG: Print status of first 5 tests
-                    for test in tests[:5]:
-                        print(f"Test ID: {test.get('id')}, Status ID: {test.get('status_id')}")
-
                     total = len(tests)
-                    executed = sum(1 for test in tests if test.get("status_id", 3) != 3)
+                    executed = sum(1 for test in tests if test.get("status_id") not in (None, 3))
                     not_executed = total - executed
+
+                    # Priority breakdown
+                    priority_counts = {"High": 0, "Medium": 0, "Low": 0}
+                    priority_map = {
+                        4: "High",   # Example: Replace with your real priority IDs
+                        2: "Medium",
+                        1: "Low"
+                    }
+
+                    for test in tests:
+                        pid = test.get("priority_id")
+                        pname = priority_map.get(pid)
+                        if pname:
+                            priority_counts[pname] += 1
+
                 except Exception as e:
                     error = f"Error fetching data: {str(e)}"
             else:
@@ -38,7 +50,14 @@ def index():
         else:
             error = "No URL input received."
 
-    return render_template("index.html", total=total, executed=executed, not_executed=not_executed, error=error)
+    return render_template(
+        "index.html",
+        total=total,
+        executed=executed,
+        not_executed=not_executed,
+        priority_counts=priority_counts,
+        error=error
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

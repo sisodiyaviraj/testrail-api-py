@@ -23,6 +23,11 @@
         <p><strong>Total Test Cases:</strong> {{ total }}</p>
         <p><strong>Executed Test Cases:</strong> {{ executed }}</p>
         <p><strong>Not Executed Test Cases:</strong> {{ not_executed }}</p>
+
+        <h3>Priority Breakdown:</h3>
+        <p><strong>High:</strong> {{ priority_counts["High"] }}</p>
+        <p><strong>Medium:</strong> {{ priority_counts["Medium"] }}</p>
+        <p><strong>Low:</strong> {{ priority_counts["Low"] }}</p>
     {% endif %}
 </body>
 </html>
